@@ -26,6 +26,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "unitree_legged_msgs/FootVelocities.h"
+#include "unitree_legged_msgs/FootForces.h"
 
 using namespace UNITREE_LEGGED_SDK;
 
@@ -46,8 +47,8 @@ class ROS_Publishers
 {
 public:
     ros::Publisher *a1_state;
-    ros::Publisher *leg_force_pub[4];
-    ros::Publisher *leg_velocity_pub[4];
+    ros::Publisher *foot_force_pub;
+    ros::Publisher *foot_velocity_pub;
     ros::Publisher *imu_pub;
     ros::Publisher *leg_pose;
     ros::Publisher *pose_pub;
@@ -131,9 +132,9 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
 {
     HighState state = a1Interface->state;
 
-    std_msgs::String a1_state_msg;             // a1_state
-    geometry_msgs::WrenchStamped legForces[4]; // foot forces
-    geometry_msgs::WrenchStamped legVels[4];
+    std_msgs::String a1_state_msg;              // a1_state
+    unitree_legged_msgs::FootForces footForces; // foot forces
+    unitree_legged_msgs::FootVelocities footVels;
     geometry_msgs::PolygonStamped legPolygon;
     geometry_msgs::PoseStamped a1_pose;
     sensor_msgs::Imu imuData;
@@ -142,21 +143,31 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
 
     //! FOOT FORCES AND VELOCITIES
     // FR FL RR RL
-    for (int leg = 0; leg < 4; leg++)
-    {
-        // Constructing foot forces messages
-        legForces[leg].wrench.force.z = state.footForce[leg]; // footForceEst ??
-        legForces[leg].header.frame_id = footFrames[leg];
-        legForces[leg].header.seq = rospub.seq;
-        legForces[leg].header.stamp = ros::Time::now();
-        // Constructing foot velocities messages
-        legVels[leg].wrench.force.x = state.footSpeed2Body[leg].x; // not actually a force
-        legVels[leg].wrench.force.y = state.footSpeed2Body[leg].y;
-        legVels[leg].wrench.force.z = state.footSpeed2Body[leg].z;
-        legVels[leg].header.frame_id = footFrames[leg];
-        legVels[leg].header.seq = rospub.seq;
-        legVels[leg].header.stamp = ros::Time::now();
-    }
+    // for (int leg = 0; leg < 4; leg++)
+    // {
+    //     // Constructing foot forces messages
+    //     legForces[leg].wrench.force.z = state.footForce[leg]; // footForceEst ??
+    //     legForces[leg].header.frame_id = footFrames[leg];
+    //     legForces[leg].header.seq = rospub.seq;
+    //     legForces[leg].header.stamp = ros::Time::now();
+    //     // Constructing foot velocities messages
+    //     legVels[leg].wrench.force.x = state.footSpeed2Body[leg].x; // not actually a force
+    //     legVels[leg].wrench.force.y = state.footSpeed2Body[leg].y;
+    //     legVels[leg].wrench.force.z = state.footSpeed2Body[leg].z;
+    //     legVels[leg].header.frame_id = footFrames[leg];
+    //     legVels[leg].header.seq = rospub.seq;
+    //     legVels[leg].header.stamp = ros::Time::now();
+    // }
+
+    // ! foot forces messages
+    footForces.fr_foot_force.force.z = state.footForce[0];
+    footForces.fr_foot_force.header.seq = rospub.seq;
+    footForces.fr_foot_force.header.stamp = ros::Time::now();
+    footForces.fl_foot_force.force.z = state.footForce[1];
+    footForces.rr_foot_force.force.z = state.footForce[2];
+    footForces.rl_foot_force.force.z = state.footForce[3];
+
+    // ! foot velocities
 
     //! fill imu data
     fillImuData(state, imuData, rospub);
@@ -180,8 +191,8 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     // PUBLISHING
     for (int leg = 0; leg < 4; leg++)
     {
-        rospub.leg_force_pub[leg]->publish(legForces[leg]);
-        rospub.leg_velocity_pub[leg]->publish(legVels[leg]);
+        rospub.foot_force_pub->publish(footForces);
+        rospub.foot_velocity_pub->publish(footForces);
     }
     rospub.a1_state->publish(a1_state_msg);
     rospub.imu_pub->publish(imuData);
