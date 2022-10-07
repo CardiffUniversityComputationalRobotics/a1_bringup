@@ -23,10 +23,9 @@
 #include "geometry_msgs/WrenchStamped.h"
 #include "sensor_msgs/Imu.h"
 #include "geometry_msgs/PolygonStamped.h" // represents leg positions
-#include "geometry_msgs/PointStamped.h"
 #include "geometry_msgs/Twist.h"
-
-#define EXEC_EXAMPLE false
+#include "geometry_msgs/PoseStamped.h"
+#include "unitree_legged_msgs/FootVelocities.h"
 
 using namespace UNITREE_LEGGED_SDK;
 
@@ -51,44 +50,13 @@ public:
     ros::Publisher *leg_velocity_pub[4];
     ros::Publisher *imu_pub;
     ros::Publisher *leg_pose;
-    ros::Publisher *errPos_pub;
-    ros::Publisher *naiveOdom_pub;
+    ros::Publisher *pose_pub;
     ros::Subscriber *cmd_vel_sub;
     int seq;
 };
 
-class NaiveOdometry // WORK IN PROGRESS
-{
-public:
-    geometry_msgs::Point position;
-    float worldX;
-    float worldY;
-    float phi; // rads ??
-    const float dt = 0.02;
-
-    geometry_msgs::Point Update(HighState &state)
-    {
-        double fwdCoef = state.forwardSpeed > 0 ? 1 : 0.7;
-        phi = phi + state.rotateSpeed * 120 * 3.1415 / 180 * dt;
-        if (phi > 3.1415)
-            phi = -3.1415;
-        if (phi < -3.1415)
-            phi = 3.1415;
-
-        worldX = worldX + sin(phi) * state.forwardSpeed * fwdCoef + cos(phi) * state.sideSpeed * 0.4; // or smthng like that
-        worldY = worldY + cos(phi) * state.forwardSpeed * fwdCoef - sin(phi) * state.sideSpeed * 0.4;
-
-        position.x = worldX;
-        position.y = worldY;
-        position.z = state.bodyHeight;
-
-        return this->position;
-    }
-};
-
 float lastForwVelocity = 0.0;
 float lastSideVelocity = 0.0;
-NaiveOdometry NOdom;
 
 class Custom
 {
@@ -105,7 +73,6 @@ public:
     UDP udp;
     HighCmd cmd = {0};
     HighState state = {0};
-    int motiontime = 0;
     float dt = 0.002; // 0.001~0.01
 };
 
@@ -168,21 +135,21 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     geometry_msgs::WrenchStamped legForces[4]; // foot forces
     geometry_msgs::WrenchStamped legVels[4];
     geometry_msgs::PolygonStamped legPolygon;
-    geometry_msgs::PointStamped errPos;
-    geometry_msgs::PointStamped nOdom;
+    geometry_msgs::PoseStamped a1_pose;
     sensor_msgs::Imu imuData;
 
     a1_state_msg.data = std::to_string(a1Interface->state.mode);
 
+    //! FOOT FORCES AND VELOCITIES
     // FR FL RR RL
     for (int leg = 0; leg < 4; leg++)
     {
-        // Constructing leg forces messages
+        // Constructing foot forces messages
         legForces[leg].wrench.force.z = state.footForce[leg]; // footForceEst ??
         legForces[leg].header.frame_id = footFrames[leg];
         legForces[leg].header.seq = rospub.seq;
         legForces[leg].header.stamp = ros::Time::now();
-        // Constructing leg velocities messages
+        // Constructing foot velocities messages
         legVels[leg].wrench.force.x = state.footSpeed2Body[leg].x; // not actually a force
         legVels[leg].wrench.force.y = state.footSpeed2Body[leg].y;
         legVels[leg].wrench.force.z = state.footSpeed2Body[leg].z;
@@ -190,20 +157,25 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
         legVels[leg].header.seq = rospub.seq;
         legVels[leg].header.stamp = ros::Time::now();
     }
+
+    //! fill imu data
     fillImuData(state, imuData, rospub);
+
+    //! fill poly data
     fillPolyData(state, legPolygon, rospub);
 
-    errPos.point.x = state.forwardPosition;
-    errPos.point.y = state.sidePosition;
-    errPos.point.z = state.bodyHeight;
-    errPos.header.frame_id = "base";
-    errPos.header.seq = rospub.seq;
-    errPos.header.stamp = ros::Time::now();
+    a1_pose.pose.position.x = state.forwardPosition;
+    a1_pose.pose.position.y = state.sidePosition;
+    a1_pose.pose.position.z = state.bodyHeight;
 
-    nOdom.point = NOdom.Update(state);
-    nOdom.header.frame_id = "base";
-    nOdom.header.seq = rospub.seq;
-    nOdom.header.stamp = ros::Time::now();
+    a1_pose.pose.orientation.w = state.imu.quaternion[0];
+    a1_pose.pose.orientation.x = state.imu.quaternion[1];
+    a1_pose.pose.orientation.y = state.imu.quaternion[2];
+    a1_pose.pose.orientation.z = state.imu.quaternion[3];
+
+    a1_pose.header.frame_id = "base";
+    a1_pose.header.seq = rospub.seq;
+    a1_pose.header.stamp = ros::Time::now();
 
     // PUBLISHING
     for (int leg = 0; leg < 4; leg++)
@@ -214,8 +186,7 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     rospub.a1_state->publish(a1_state_msg);
     rospub.imu_pub->publish(imuData);
     rospub.leg_pose->publish(legPolygon);
-    rospub.errPos_pub->publish(errPos);
-    rospub.naiveOdom_pub->publish(nOdom);
+    rospub.pose_pub->publish(a1_pose);
 
     rospub.seq++;
     ros::spinOnce();
@@ -237,9 +208,7 @@ void Custom::RobotControl(ROS_Publishers rospub)
         exit(1); // probably forbidden technique, but it works
 
     time_stop += 2;
-    motiontime += 2;
     udp.GetRecv(state);
-    // printf("%d   %f\n", motiontime, state.imu.quaternion[2]);
 
     cmd.forwardSpeed = 0.0f;
     cmd.sideSpeed = 0.0f;
@@ -290,10 +259,6 @@ void Custom::RobotControl(ROS_Publishers rospub)
         ROS_WARN("rotate speed out of range: [%f]", teleop_cmd.linear.y);
     }
 
-    // cmd.forwardSpeed = teleop_cmd.linear.x;
-    // cmd.sideSpeed = teleop_cmd.linear.y;
-    // cmd.rotateSpeed = teleop_cmd.angular.z;
-
     if (ros::ok())
         SendToROS(this, rospub);
     udp.SetSend(cmd);
@@ -302,12 +267,10 @@ void Custom::RobotControl(ROS_Publishers rospub)
 int main(int argc, char **argv)
 {
 
-    NOdom.worldX = 0;
-    NOdom.worldY = 0;
-    NOdom.phi = 0;
-
     ros::init(argc, argv, "a1_driver");
     ros::NodeHandle nh;
+
+    // !PUBLISHERS
     ros::Publisher a1_state_pub;
     //  Debug
     a1_state_pub = nh.advertise<std_msgs::String>("a1_state", 1000);
@@ -325,9 +288,9 @@ int main(int argc, char **argv)
     ros::Publisher IMU_pub = nh.advertise<sensor_msgs::Imu>("imu_raw", 1000);
     // Position 2 Body
     ros::Publisher LegPose_pub = nh.advertise<geometry_msgs::PolygonStamped>("feet_polygon", 1000);
-    ros::Publisher errPos_pub = nh.advertise<geometry_msgs::PointStamped>("odom_error", 1000);
-    ros::Publisher nOdom_pub = nh.advertise<geometry_msgs::PointStamped>("nodom", 1000);
+    ros::Publisher pose_pub = nh.advertise<geometry_msgs::PoseStamped>("pose", 1000);
 
+    // !SUBSCRIBERS
     ros::Subscriber cmd_vel_sub = nh.subscribe("cmd_vel", 1000, cmd_velCallback);
 
     /* ROS structure construction for loop */
@@ -343,8 +306,7 @@ int main(int argc, char **argv)
     rospub.leg_velocity_pub[3] = &RLv_pub;
     rospub.imu_pub = &IMU_pub;
     rospub.leg_pose = &LegPose_pub;
-    rospub.errPos_pub = &errPos_pub;
-    rospub.naiveOdom_pub = &nOdom_pub;
+    rospub.pose_pub = &pose_pub;
     rospub.cmd_vel_sub = &cmd_vel_sub;
     rospub.seq = 0;
 
