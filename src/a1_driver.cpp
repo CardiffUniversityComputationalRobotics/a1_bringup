@@ -46,7 +46,7 @@ void cmd_velCallback(const geometry_msgs::Twist msg)
 class ROS_Publishers
 {
 public:
-    ros::Publisher *chatter;
+    ros::Publisher *a1_state;
     ros::Publisher *leg_force_pub[4];
     ros::Publisher *leg_velocity_pub[4];
     ros::Publisher *imu_pub;
@@ -164,7 +164,7 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
 {
     HighState state = a1Interface->state;
 
-    std_msgs::String msg;                      // chatter
+    std_msgs::String a1_state_msg;             // a1_state
     geometry_msgs::WrenchStamped legForces[4]; // foot forces
     geometry_msgs::WrenchStamped legVels[4];
     geometry_msgs::PolygonStamped legPolygon;
@@ -172,7 +172,7 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     geometry_msgs::PointStamped nOdom;
     sensor_msgs::Imu imuData;
 
-    msg.data = std::to_string(a1Interface->state.mode);
+    a1_state_msg.data = std::to_string(a1Interface->state.mode);
 
     // FR FL RR RL
     for (int leg = 0; leg < 4; leg++)
@@ -211,7 +211,7 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
         rospub.leg_force_pub[leg]->publish(legForces[leg]);
         rospub.leg_velocity_pub[leg]->publish(legVels[leg]);
     }
-    rospub.chatter->publish(msg);
+    rospub.a1_state->publish(a1_state_msg);
     rospub.imu_pub->publish(imuData);
     rospub.leg_pose->publish(legPolygon);
     rospub.errPos_pub->publish(errPos);
@@ -306,11 +306,11 @@ int main(int argc, char **argv)
     NOdom.worldY = 0;
     NOdom.phi = 0;
 
-    ros::init(argc, argv, "a1Telemetry");
+    ros::init(argc, argv, "a1_driver");
     ros::NodeHandle nh;
-    ros::Publisher chatter_pub;
+    ros::Publisher a1_state_pub;
     //  Debug
-    chatter_pub = nh.advertise<std_msgs::String>("chatter", 1000);
+    a1_state_pub = nh.advertise<std_msgs::String>("a1_state", 1000);
     // Forces
     ros::Publisher FRf_pub = nh.advertise<geometry_msgs::WrenchStamped>("FR_force", 1000);
     ros::Publisher FLf_pub = nh.advertise<geometry_msgs::WrenchStamped>("FL_force", 1000);
@@ -332,7 +332,7 @@ int main(int argc, char **argv)
 
     /* ROS structure construction for loop */
     ROS_Publishers rospub; // a structure to pass into loop control
-    rospub.chatter = &chatter_pub;
+    rospub.a1_state = &a1_state_pub;
     rospub.leg_force_pub[0] = &FRf_pub; // packing all neccessary ros objects together
     rospub.leg_force_pub[1] = &FLf_pub;
     rospub.leg_force_pub[2] = &RRf_pub;
@@ -349,8 +349,6 @@ int main(int argc, char **argv)
     rospub.seq = 0;
 
     Custom custom(HIGHLEVEL);
-    // Custom lowCustom(LOWLEVEL);
-    // InitEnvironment();
 
     std::cout << "Communication level is set to HIGH-level." << std::endl
               << "WARNING: Make sure the robot is standing on the ground." << std::endl

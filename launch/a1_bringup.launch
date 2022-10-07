@@ -1,4 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <node pkg="a1_driver" type="a1_driver" name="a1_driver_node" />
-</launch>
