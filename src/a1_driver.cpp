@@ -27,6 +27,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "unitree_legged_msgs/FootVelocities.h"
 #include "unitree_legged_msgs/FootForces.h"
+#include "geometry_msgs/TwistStamped.h"
 
 using namespace UNITREE_LEGGED_SDK;
 
@@ -52,6 +53,7 @@ public:
     ros::Publisher *imu_pub;
     ros::Publisher *leg_pose_pub;
     ros::Publisher *pose_pub;
+    ros::Publisher *current_vel_pub;
     ros::Subscriber *cmd_vel_sub;
     int seq;
 };
@@ -132,111 +134,105 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
 {
     HighState state = a1Interface->state;
 
-    std_msgs::String a1_state_msg;              // a1_state
-    unitree_legged_msgs::FootForces footForces; // foot forces
-    unitree_legged_msgs::FootVelocities footVels;
-    geometry_msgs::PolygonStamped legPolygon;
-    geometry_msgs::PoseStamped a1_pose;
-    sensor_msgs::Imu imuData;
+    std_msgs::String a1_state_msg;                   // a1_state
+    unitree_legged_msgs::FootForces foot_forces_msg; // foot forces
+    unitree_legged_msgs::FootVelocities foot_vels_msg;
+    geometry_msgs::PolygonStamped leg_polygon_msg;
+    geometry_msgs::PoseStamped a1_pose_msg;
+    sensor_msgs::Imu imu_data_msg;
+    geometry_msgs::TwistStamped current_vel_msg;
 
     a1_state_msg.data = std::to_string(a1Interface->state.mode);
 
-    //! FOOT FORCES AND VELOCITIES
-    // FR FL RR RL
-    // for (int leg = 0; leg < 4; leg++)
-    // {
-    //     // Constructing foot forces messages
-    //     legForces[leg].wrench.force.z = state.footForce[leg]; // footForceEst ??
-    //     legForces[leg].header.frame_id = footFrames[leg];
-    //     legForces[leg].header.seq = rospub.seq;
-    //     legForces[leg].header.stamp = ros::Time::now();
-    //     // Constructing foot velocities messages
-    //     legVels[leg].wrench.force.x = state.footSpeed2Body[leg].x; // not actually a force
-    //     legVels[leg].wrench.force.y = state.footSpeed2Body[leg].y;
-    //     legVels[leg].wrench.force.z = state.footSpeed2Body[leg].z;
-    //     legVels[leg].header.frame_id = footFrames[leg];
-    //     legVels[leg].header.seq = rospub.seq;
-    //     legVels[leg].header.stamp = ros::Time::now();
-    // }
-
     // ! foot forces messages
     // front right
-    footForces.fr_foot_force.force.z = state.footForce[0];
-    footForces.fr_foot_force.header.seq = rospub.seq;
-    footForces.fr_foot_force.header.stamp = ros::Time::now();
-    footForces.fr_foot_force.header.frame_id = footFrames[0];
+    foot_forces_msg.fr_foot_force.force.z = state.footForce[0];
+    foot_forces_msg.fr_foot_force.header.seq = rospub.seq;
+    foot_forces_msg.fr_foot_force.header.stamp = ros::Time::now();
+    foot_forces_msg.fr_foot_force.header.frame_id = footFrames[0];
     // front left
-    footForces.fl_foot_force.force.z = state.footForce[1];
-    footForces.fl_foot_force.header.seq = rospub.seq;
-    footForces.fl_foot_force.header.stamp = ros::Time::now();
-    footForces.fl_foot_force.header.frame_id = footFrames[1];
+    foot_forces_msg.fl_foot_force.force.z = state.footForce[1];
+    foot_forces_msg.fl_foot_force.header.seq = rospub.seq;
+    foot_forces_msg.fl_foot_force.header.stamp = ros::Time::now();
+    foot_forces_msg.fl_foot_force.header.frame_id = footFrames[1];
     // rear right
-    footForces.rr_foot_force.force.z = state.footForce[2];
-    footForces.rr_foot_force.header.seq = rospub.seq;
-    footForces.rr_foot_force.header.stamp = ros::Time::now();
-    footForces.rr_foot_force.header.frame_id = footFrames[2];
+    foot_forces_msg.rr_foot_force.force.z = state.footForce[2];
+    foot_forces_msg.rr_foot_force.header.seq = rospub.seq;
+    foot_forces_msg.rr_foot_force.header.stamp = ros::Time::now();
+    foot_forces_msg.rr_foot_force.header.frame_id = footFrames[2];
     // rear left
-    footForces.rl_foot_force.force.z = state.footForce[3];
-    footForces.rl_foot_force.header.seq = rospub.seq;
-    footForces.rl_foot_force.header.stamp = ros::Time::now();
-    footForces.rl_foot_force.header.frame_id = footFrames[3];
+    foot_forces_msg.rl_foot_force.force.z = state.footForce[3];
+    foot_forces_msg.rl_foot_force.header.seq = rospub.seq;
+    foot_forces_msg.rl_foot_force.header.stamp = ros::Time::now();
+    foot_forces_msg.rl_foot_force.header.frame_id = footFrames[3];
 
     // ! foot velocities
     // front right
-    footVels.fr_foot_velocity.velocity.x = state.footSpeed2Body[0].x;
-    footVels.fr_foot_velocity.velocity.y = state.footSpeed2Body[0].y;
-    footVels.fr_foot_velocity.velocity.z = state.footSpeed2Body[0].z;
-    footVels.fr_foot_velocity.header.seq = rospub.seq;
-    footVels.fr_foot_velocity.header.stamp = ros::Time::now();
-    footVels.fr_foot_velocity.header.frame_id = footFrames[0];
+    foot_vels_msg.fr_foot_velocity.velocity.x = state.footSpeed2Body[0].x;
+    foot_vels_msg.fr_foot_velocity.velocity.y = state.footSpeed2Body[0].y;
+    foot_vels_msg.fr_foot_velocity.velocity.z = state.footSpeed2Body[0].z;
+    foot_vels_msg.fr_foot_velocity.header.seq = rospub.seq;
+    foot_vels_msg.fr_foot_velocity.header.stamp = ros::Time::now();
+    foot_vels_msg.fr_foot_velocity.header.frame_id = footFrames[0];
     // front left
-    footVels.fl_foot_velocity.velocity.x = state.footSpeed2Body[1].x;
-    footVels.fl_foot_velocity.velocity.y = state.footSpeed2Body[1].y;
-    footVels.fl_foot_velocity.velocity.z = state.footSpeed2Body[1].z;
-    footVels.fl_foot_velocity.header.seq = rospub.seq;
-    footVels.fl_foot_velocity.header.stamp = ros::Time::now();
-    footVels.fl_foot_velocity.header.frame_id = footFrames[1];
+    foot_vels_msg.fl_foot_velocity.velocity.x = state.footSpeed2Body[1].x;
+    foot_vels_msg.fl_foot_velocity.velocity.y = state.footSpeed2Body[1].y;
+    foot_vels_msg.fl_foot_velocity.velocity.z = state.footSpeed2Body[1].z;
+    foot_vels_msg.fl_foot_velocity.header.seq = rospub.seq;
+    foot_vels_msg.fl_foot_velocity.header.stamp = ros::Time::now();
+    foot_vels_msg.fl_foot_velocity.header.frame_id = footFrames[1];
     // rear right
-    footVels.rr_foot_velocity.velocity.x = state.footSpeed2Body[2].x;
-    footVels.rr_foot_velocity.velocity.y = state.footSpeed2Body[2].y;
-    footVels.rr_foot_velocity.velocity.z = state.footSpeed2Body[2].z;
-    footVels.rr_foot_velocity.header.seq = rospub.seq;
-    footVels.rr_foot_velocity.header.stamp = ros::Time::now();
-    footVels.rr_foot_velocity.header.frame_id = footFrames[2];
+    foot_vels_msg.rr_foot_velocity.velocity.x = state.footSpeed2Body[2].x;
+    foot_vels_msg.rr_foot_velocity.velocity.y = state.footSpeed2Body[2].y;
+    foot_vels_msg.rr_foot_velocity.velocity.z = state.footSpeed2Body[2].z;
+    foot_vels_msg.rr_foot_velocity.header.seq = rospub.seq;
+    foot_vels_msg.rr_foot_velocity.header.stamp = ros::Time::now();
+    foot_vels_msg.rr_foot_velocity.header.frame_id = footFrames[2];
     // rear left
-    footVels.rl_foot_velocity.velocity.x = state.footSpeed2Body[3].x;
-    footVels.rl_foot_velocity.velocity.y = state.footSpeed2Body[3].y;
-    footVels.rl_foot_velocity.velocity.z = state.footSpeed2Body[3].z;
-    footVels.rl_foot_velocity.header.seq = rospub.seq;
-    footVels.rl_foot_velocity.header.stamp = ros::Time::now();
-    footVels.rl_foot_velocity.header.frame_id = footFrames[3];
+    foot_vels_msg.rl_foot_velocity.velocity.x = state.footSpeed2Body[3].x;
+    foot_vels_msg.rl_foot_velocity.velocity.y = state.footSpeed2Body[3].y;
+    foot_vels_msg.rl_foot_velocity.velocity.z = state.footSpeed2Body[3].z;
+    foot_vels_msg.rl_foot_velocity.header.seq = rospub.seq;
+    foot_vels_msg.rl_foot_velocity.header.stamp = ros::Time::now();
+    foot_vels_msg.rl_foot_velocity.header.frame_id = footFrames[3];
 
     //! fill imu data
-    fillImuData(state, imuData, rospub);
+    fillImuData(state, imu_data_msg, rospub);
 
     //! fill poly data
-    fillPolyData(state, legPolygon, rospub);
+    fillPolyData(state, leg_polygon_msg, rospub);
 
-    a1_pose.pose.position.x = state.forwardPosition;
-    a1_pose.pose.position.y = state.sidePosition;
-    a1_pose.pose.position.z = state.bodyHeight;
+    a1_pose_msg.pose.position.x = state.forwardPosition;
+    a1_pose_msg.pose.position.y = state.sidePosition;
+    a1_pose_msg.pose.position.z = state.bodyHeight;
 
-    a1_pose.pose.orientation.w = state.imu.quaternion[0];
-    a1_pose.pose.orientation.x = state.imu.quaternion[1];
-    a1_pose.pose.orientation.y = state.imu.quaternion[2];
-    a1_pose.pose.orientation.z = state.imu.quaternion[3];
+    a1_pose_msg.pose.orientation.w = state.imu.quaternion[0];
+    a1_pose_msg.pose.orientation.x = state.imu.quaternion[1];
+    a1_pose_msg.pose.orientation.y = state.imu.quaternion[2];
+    a1_pose_msg.pose.orientation.z = state.imu.quaternion[3];
 
-    a1_pose.header.frame_id = "base";
-    a1_pose.header.seq = rospub.seq;
-    a1_pose.header.stamp = ros::Time::now();
+    a1_pose_msg.header.frame_id = "base";
+    a1_pose_msg.header.seq = rospub.seq;
+    a1_pose_msg.header.stamp = ros::Time::now();
+
+    // !current robot velocity
+
+    current_vel_msg.twist.linear.x = state.forwardSpeed;
+    current_vel_msg.twist.linear.y = state.sideSpeed;
+    current_vel_msg.twist.linear.z = state.updownSpeed;
+
+    current_vel_msg.twist.angular.z = state.rotateSpeed;
+    current_vel_msg.header.seq = rospub.seq;
+    current_vel_msg.header.frame_id = "base";
 
     // PUBLISHING
-    rospub.foot_force_pub->publish(footForces);
-    rospub.foot_velocity_pub->publish(footForces);
+    rospub.foot_force_pub->publish(foot_forces_msg);
+    rospub.foot_velocity_pub->publish(foot_vels_msg);
     rospub.a1_state->publish(a1_state_msg);
-    rospub.imu_pub->publish(imuData);
-    rospub.leg_pose_pub->publish(legPolygon);
-    rospub.pose_pub->publish(a1_pose);
+    rospub.imu_pub->publish(imu_data_msg);
+    rospub.leg_pose_pub->publish(leg_polygon_msg);
+    rospub.pose_pub->publish(a1_pose_msg);
+    rospub.current_vel_pub->publish(current_vel_msg);
 
     rospub.seq++;
     ros::spinOnce();
@@ -320,6 +316,9 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "a1_driver");
     ros::NodeHandle nh;
 
+    // !SUBSCRIBERS
+    ros::Subscriber cmd_vel_sub = nh.subscribe("cmd_vel", 1000, cmd_velCallback);
+
     // !PUBLISHERS
     //  Debug
     ros::Publisher a1_state_pub = nh.advertise<std_msgs::String>("a1_state", 1000);
@@ -327,15 +326,13 @@ int main(int argc, char **argv)
     ros::Publisher foot_force_pub = nh.advertise<unitree_legged_msgs::FootForces>("foot_forces", 1000);
     // Velocities
     ros::Publisher foot_velocity_pub = nh.advertise<unitree_legged_msgs::FootVelocities>("foot_velocities", 1000);
-
     // IMU
     ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>("imu_raw", 1000);
     // Position 2 Body
     ros::Publisher leg_pose_pub = nh.advertise<geometry_msgs::PolygonStamped>("feet_polygon", 1000);
     ros::Publisher pose_pub = nh.advertise<geometry_msgs::PoseStamped>("pose", 1000);
 
-    // !SUBSCRIBERS
-    ros::Subscriber cmd_vel_sub = nh.subscribe("cmd_vel", 1000, cmd_velCallback);
+    ros::Publisher current_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("current_vel", 1000);
 
     // !PUBLISHERS
     /* ROS structure construction for loop */
@@ -347,6 +344,7 @@ int main(int argc, char **argv)
     rospub.leg_pose_pub = &leg_pose_pub;
     rospub.pose_pub = &pose_pub;
     rospub.cmd_vel_sub = &cmd_vel_sub;
+    rospub.current_vel_pub = &current_vel_pub;
     rospub.seq = 0;
 
     Custom custom(HIGHLEVEL);
