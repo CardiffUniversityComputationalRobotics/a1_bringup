@@ -50,7 +50,7 @@ public:
     ros::Publisher *foot_force_pub;
     ros::Publisher *foot_velocity_pub;
     ros::Publisher *imu_pub;
-    ros::Publisher *leg_pose;
+    ros::Publisher *leg_pose_pub;
     ros::Publisher *pose_pub;
     ros::Subscriber *cmd_vel_sub;
     int seq;
@@ -182,6 +182,34 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     footForces.rl_foot_force.header.frame_id = footFrames[3];
 
     // ! foot velocities
+    // front right
+    footVels.fr_foot_velocity.velocity.x = state.footSpeed2Body[0].x;
+    footVels.fr_foot_velocity.velocity.y = state.footSpeed2Body[0].y;
+    footVels.fr_foot_velocity.velocity.z = state.footSpeed2Body[0].z;
+    footVels.fr_foot_velocity.header.seq = rospub.seq;
+    footVels.fr_foot_velocity.header.stamp = ros::Time::now();
+    footVels.fr_foot_velocity.header.frame_id = footFrames[0];
+    // front left
+    footVels.fl_foot_velocity.velocity.x = state.footSpeed2Body[1].x;
+    footVels.fl_foot_velocity.velocity.y = state.footSpeed2Body[1].y;
+    footVels.fl_foot_velocity.velocity.z = state.footSpeed2Body[1].z;
+    footVels.fl_foot_velocity.header.seq = rospub.seq;
+    footVels.fl_foot_velocity.header.stamp = ros::Time::now();
+    footVels.fl_foot_velocity.header.frame_id = footFrames[1];
+    // rear right
+    footVels.rr_foot_velocity.velocity.x = state.footSpeed2Body[2].x;
+    footVels.rr_foot_velocity.velocity.y = state.footSpeed2Body[2].y;
+    footVels.rr_foot_velocity.velocity.z = state.footSpeed2Body[2].z;
+    footVels.rr_foot_velocity.header.seq = rospub.seq;
+    footVels.rr_foot_velocity.header.stamp = ros::Time::now();
+    footVels.rr_foot_velocity.header.frame_id = footFrames[2];
+    // rear left
+    footVels.rl_foot_velocity.velocity.x = state.footSpeed2Body[3].x;
+    footVels.rl_foot_velocity.velocity.y = state.footSpeed2Body[3].y;
+    footVels.rl_foot_velocity.velocity.z = state.footSpeed2Body[3].z;
+    footVels.rl_foot_velocity.header.seq = rospub.seq;
+    footVels.rl_foot_velocity.header.stamp = ros::Time::now();
+    footVels.rl_foot_velocity.header.frame_id = footFrames[3];
 
     //! fill imu data
     fillImuData(state, imuData, rospub);
@@ -203,14 +231,11 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     a1_pose.header.stamp = ros::Time::now();
 
     // PUBLISHING
-    for (int leg = 0; leg < 4; leg++)
-    {
-        rospub.foot_force_pub->publish(footForces);
-        rospub.foot_velocity_pub->publish(footForces);
-    }
+    rospub.foot_force_pub->publish(footForces);
+    rospub.foot_velocity_pub->publish(footForces);
     rospub.a1_state->publish(a1_state_msg);
     rospub.imu_pub->publish(imuData);
-    rospub.leg_pose->publish(legPolygon);
+    rospub.leg_pose_pub->publish(legPolygon);
     rospub.pose_pub->publish(a1_pose);
 
     rospub.seq++;
@@ -296,30 +321,30 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // !PUBLISHERS
-    ros::Publisher a1_state_pub;
     //  Debug
-    a1_state_pub = nh.advertise<std_msgs::String>("a1_state", 1000);
+    ros::Publisher a1_state_pub = nh.advertise<std_msgs::String>("a1_state", 1000);
     // Forces
     ros::Publisher foot_force_pub = nh.advertise<unitree_legged_msgs::FootForces>("foot_forces", 1000);
     // Velocities
     ros::Publisher foot_velocity_pub = nh.advertise<unitree_legged_msgs::FootVelocities>("foot_velocities", 1000);
 
     // IMU
-    ros::Publisher IMU_pub = nh.advertise<sensor_msgs::Imu>("imu_raw", 1000);
+    ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>("imu_raw", 1000);
     // Position 2 Body
-    ros::Publisher LegPose_pub = nh.advertise<geometry_msgs::PolygonStamped>("feet_polygon", 1000);
+    ros::Publisher leg_pose_pub = nh.advertise<geometry_msgs::PolygonStamped>("feet_polygon", 1000);
     ros::Publisher pose_pub = nh.advertise<geometry_msgs::PoseStamped>("pose", 1000);
 
     // !SUBSCRIBERS
     ros::Subscriber cmd_vel_sub = nh.subscribe("cmd_vel", 1000, cmd_velCallback);
 
+    // !PUBLISHERS
     /* ROS structure construction for loop */
     ROS_Publishers rospub; // a structure to pass into loop control
     rospub.a1_state = &a1_state_pub;
     rospub.foot_force_pub = &foot_force_pub; // packing all neccessary ros objects together
     rospub.foot_velocity_pub = &foot_velocity_pub;
-    rospub.imu_pub = &IMU_pub;
-    rospub.leg_pose = &LegPose_pub;
+    rospub.imu_pub = &imu_pub;
+    rospub.leg_pose_pub = &leg_pose_pub;
     rospub.pose_pub = &pose_pub;
     rospub.cmd_vel_sub = &cmd_vel_sub;
     rospub.seq = 0;
