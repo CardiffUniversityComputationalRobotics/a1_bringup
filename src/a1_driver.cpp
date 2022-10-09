@@ -160,12 +160,26 @@ void SendToROS(Custom *a1Interface, ROS_Publishers rospub)
     // }
 
     // ! foot forces messages
+    // front right
     footForces.fr_foot_force.force.z = state.footForce[0];
     footForces.fr_foot_force.header.seq = rospub.seq;
     footForces.fr_foot_force.header.stamp = ros::Time::now();
+    footForces.fr_foot_force.header.frame_id = footFrames[0];
+    // front left
     footForces.fl_foot_force.force.z = state.footForce[1];
+    footForces.fl_foot_force.header.seq = rospub.seq;
+    footForces.fl_foot_force.header.stamp = ros::Time::now();
+    footForces.fl_foot_force.header.frame_id = footFrames[1];
+    // rear right
     footForces.rr_foot_force.force.z = state.footForce[2];
+    footForces.rr_foot_force.header.seq = rospub.seq;
+    footForces.rr_foot_force.header.stamp = ros::Time::now();
+    footForces.rr_foot_force.header.frame_id = footFrames[2];
+    // rear left
     footForces.rl_foot_force.force.z = state.footForce[3];
+    footForces.rl_foot_force.header.seq = rospub.seq;
+    footForces.rl_foot_force.header.stamp = ros::Time::now();
+    footForces.rl_foot_force.header.frame_id = footFrames[3];
 
     // ! foot velocities
 
@@ -286,15 +300,10 @@ int main(int argc, char **argv)
     //  Debug
     a1_state_pub = nh.advertise<std_msgs::String>("a1_state", 1000);
     // Forces
-    ros::Publisher FRf_pub = nh.advertise<geometry_msgs::WrenchStamped>("FR_force", 1000);
-    ros::Publisher FLf_pub = nh.advertise<geometry_msgs::WrenchStamped>("FL_force", 1000);
-    ros::Publisher RRf_pub = nh.advertise<geometry_msgs::WrenchStamped>("RR_force", 1000);
-    ros::Publisher RLf_pub = nh.advertise<geometry_msgs::WrenchStamped>("RL_force", 1000);
+    ros::Publisher foot_force_pub = nh.advertise<unitree_legged_msgs::FootForces>("foot_forces", 1000);
     // Velocities
-    ros::Publisher FRv_pub = nh.advertise<geometry_msgs::WrenchStamped>("FR_vel", 1000);
-    ros::Publisher FLv_pub = nh.advertise<geometry_msgs::WrenchStamped>("FL_vel", 1000);
-    ros::Publisher RRv_pub = nh.advertise<geometry_msgs::WrenchStamped>("RR_vel", 1000);
-    ros::Publisher RLv_pub = nh.advertise<geometry_msgs::WrenchStamped>("RL_vel", 1000);
+    ros::Publisher foot_velocity_pub = nh.advertise<unitree_legged_msgs::FootVelocities>("foot_velocities", 1000);
+
     // IMU
     ros::Publisher IMU_pub = nh.advertise<sensor_msgs::Imu>("imu_raw", 1000);
     // Position 2 Body
@@ -307,14 +316,8 @@ int main(int argc, char **argv)
     /* ROS structure construction for loop */
     ROS_Publishers rospub; // a structure to pass into loop control
     rospub.a1_state = &a1_state_pub;
-    rospub.leg_force_pub[0] = &FRf_pub; // packing all neccessary ros objects together
-    rospub.leg_force_pub[1] = &FLf_pub;
-    rospub.leg_force_pub[2] = &RRf_pub;
-    rospub.leg_force_pub[3] = &RLf_pub;
-    rospub.leg_velocity_pub[0] = &FRv_pub;
-    rospub.leg_velocity_pub[1] = &FLv_pub;
-    rospub.leg_velocity_pub[2] = &RRv_pub;
-    rospub.leg_velocity_pub[3] = &RLv_pub;
+    rospub.foot_force_pub = &foot_force_pub; // packing all neccessary ros objects together
+    rospub.foot_velocity_pub = &foot_velocity_pub;
     rospub.imu_pub = &IMU_pub;
     rospub.leg_pose = &LegPose_pub;
     rospub.pose_pub = &pose_pub;
