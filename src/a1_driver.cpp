@@ -88,15 +88,15 @@ void fillImuData(HighState &state, sensor_msgs::Imu &imuData, ROS_Publishers &ro
 
     imuData.angular_velocity.z = state.rotateSpeed;
 
-    if (lastForwVelocity == 0.0)
-        lastForwVelocity = state.forwardSpeed;
-    else if (lastSideVelocity == 0.0)
-        lastSideVelocity = state.sideSpeed;
-    else
-    {
-        imuData.linear_acceleration.y = (state.forwardSpeed - lastForwVelocity) / 0.02; // TODO: pass dt here
-        imuData.linear_acceleration.x = (state.sideSpeed - lastSideVelocity) / 0.02;
-    }
+    // if (lastForwVelocity == 0.0)
+    //     lastForwVelocity = state.forwardSpeed;
+    // else if (lastSideVelocity == 0.0)
+    //     lastSideVelocity = state.sideSpeed;
+    // else
+    // {
+    //     imuData.linear_acceleration.y = (state.forwardSpeed - lastForwVelocity) / 0.02; // TODO: pass dt here
+    //     imuData.linear_acceleration.x = (state.sideSpeed - lastSideVelocity) / 0.02;
+    // }
 
     if (state.imu.quaternion[0] == 0 && state.imu.quaternion[1] == 0 && state.imu.quaternion[2] == 0 && state.imu.quaternion[3] == 0)
     {
