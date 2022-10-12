@@ -113,7 +113,7 @@ void fillImuData(HighState &state, sensor_msgs::Imu &imuData, ROS_Publishers &ro
         imuData.orientation.z = state.imu.quaternion[3];
     }
     imuData.header.seq = rospub.seq;
-    imuData.header.frame_id = "imu_link";
+    imuData.header.frame_id = "trunk";
     imuData.header.stamp = ros::Time::now();
 }
 
