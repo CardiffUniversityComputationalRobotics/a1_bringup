@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 include_directories(include)
 link_directories(lib)
 
-set(EXTRA_LIBS -pthread libunitree_legged_sdk_amd64.so lcm)
+set(EXTRA_LIBS -pthread /home/$ENV{USER}/ros/noetic/system/src/unitree_legged_sdk/lib/libunitree_legged_sdk_amd64.so lcm)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES a1sdk
